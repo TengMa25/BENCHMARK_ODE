@@ -101,8 +101,11 @@ export -f task_one
 # =======================
 TASKS_FILE="$(mktemp)"
 for v in "${VARIANTS[@]}"; do
-  for c in $(seq -w "${CASE_FROM}" "${CASE_TO}"); do
-    for d in $(seq -w "${DS_FROM}" "${DS_TO}"); do
+  for c in $(seq "${CASE_FROM}" "${CASE_TO}"); do
+    c=$(printf "%02d" "${c}")
+    for d in $(seq "${DS_FROM}" "${DS_TO}"); do
+      d=$(printf "%02d" "${d}")
+
       echo "${v} ${c} ${d}" >> "${TASKS_FILE}"
     done
   done
@@ -123,7 +126,9 @@ echo "[INFO] Total tasks=$(wc -l < "${TASKS_FILE}")"
 # =======================
 # 4) Run tasks (parallel)
 # =======================
-cat "${TASKS_FILE}" | xargs -n 3 -P "${JOBS}" bash -lc 'task_one "$0" "$1" "$2"'
+# cat "${TASKS_FILE}" | xargs -n 3 -P "${JOBS}" bash -lc 'task_one "$0" "$1" "$2"'
+cat "${TASKS_FILE}" | xargs -n 3 -P "${JOBS}" bash -lc 'task_one "$1" "$2" "$3"' _
+
 rm -f "${TASKS_FILE}"
 
 echo "[DONE] Finished. Results under: ${OUT_BASE}"
