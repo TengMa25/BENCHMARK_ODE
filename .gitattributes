@@ -1,9 +1,8 @@
 # Bash 脚本强制使用 LF（Linux 需要）
 *.sh text eol=lf
 
-# Python 文件也统一 LF（推荐）
-*.py text eol=lf
 
 # 配置文件
 *.yaml text eol=lf
 *.yml  text eol=lf
+*.py text eol=lf working-tree-encoding=UTF-8
