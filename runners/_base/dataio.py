@@ -30,7 +30,7 @@ def load_system_spec(system_dir: str) -> SystemSpec:
     )
 
 def resolve_data_path(data_root: str, system: str, case_id: str, dataset_id: str) -> str:
-    bcase_id = f"{int(case_id):02d}"
+    case_id = f"{int(case_id):02d}"
     dataset_id = f"{int(dataset_id):02d}"
     base = os.path.join(data_root, system, f"case_{case_id}", f"ds_{dataset_id}")
 
