@@ -1,0 +1,11 @@
+library:
+  type: polynomial
+  degree: 5
+  include_bias: false
+
+optimizer:
+  type: stlsq
+  threshold: 0.1
+
+differentiation:
+  type: finite_difference

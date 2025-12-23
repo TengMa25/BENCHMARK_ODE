@@ -15,6 +15,27 @@ from typing import Any, Dict
 from runners._base.configio import deep_merge, load_json_override, load_yaml
 from runners._base.dataio import load_system_spec, resolve_data_path, load_X, validate_X
 
+import numpy as np
+
+def case_threshold(case_id: str) -> float:
+    # case_id like "00".."09" or "0".."9"
+    i = int(case_id)
+    e = np.logspace(-1, -4, 10)
+    return float(e[i] / 2.0)
+
+def inject_case_params(cfg: dict, case_id: str) -> dict:
+    out = cfg
+    # optimizer.threshold placeholder
+    opt = (out.get("optimizer", {}) or {})
+    thr = opt.get("threshold", None)
+    if isinstance(thr, str) and thr.strip() == "__CASE__":
+        opt = dict(opt)
+        opt["threshold"] = case_threshold(case_id)
+        out = dict(out)
+        out["optimizer"] = opt
+    return out
+
+
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--method", required=True)     # pysindy
@@ -60,6 +81,14 @@ def get_deps() -> Dict[str, str]:
         pass
     return deps
 
+import inspect
+
+def filter_fit_kwargs(model, fit_kwargs: dict) -> dict:
+    sig = inspect.signature(model.fit)
+    allowed = set(sig.parameters.keys())
+    # t 和 x 是必有的；我们这里只过滤“额外项”
+    return {k: v for k, v in fit_kwargs.items() if k in allowed}
+
 def build_model(cfg: Dict[str, Any]):
     import pysindy as ps
 
@@ -89,10 +118,20 @@ def build_model(cfg: Dict[str, Any]):
     # optimizer
     opt_cfg = cfg.get("optimizer", {}) or {}
     opt_type = str(opt_cfg.get("type", "stlsq"))
-    if opt_type != "stlsq":
-        raise ValueError(f"Minimal runner only implements STLSQ, got: {opt_type}")
-    threshold = float(opt_cfg.get("threshold", 0.1))
-    optimizer = ps.STLSQ(threshold=threshold)
+
+    if opt_type == "stlsq":
+        threshold = float(opt_cfg.get("threshold", 0.1))
+        optimizer = ps.STLSQ(threshold=threshold)
+
+    elif opt_type == "sr3":
+        threshold = float(opt_cfg.get("threshold", 0.1))
+        nu = float(opt_cfg.get("nu", 1.0))
+        optimizer = ps.SR3(threshold=threshold, nu=nu)
+
+    elif opt_type == "lasso":
+        alpha = float(opt_cfg.get("alpha", 0.001))
+        optimizer = ps.SINDyOptimizer()  # 不要这样写
+
 
     model = ps.SINDy(
         feature_library=library,
@@ -130,6 +169,8 @@ def main():
     }
     cfg = deep_merge(code_defaults, method_cfg)
     cfg = deep_merge(cfg, load_json_override(args.config_override_json))
+    cfg = inject_case_params(cfg, args.case)
+
 
     # dt：CLI 优先，其次 system.yaml dt
     dt = args.dt if args.dt is not None else spec.dt_default
@@ -184,7 +225,8 @@ def main():
             t0 = time.perf_counter_ns()
             m = build_model(cfg)
             t1 = time.perf_counter_ns()
-            m.fit(X, t=dt)
+            fit_kwargs = (cfg.get("fit", {}) or {}).copy()
+            m.fit(X, t=dt, **fit_kwargs)
             coef = extract_coef(m)
             t2 = time.perf_counter_ns()
 
@@ -200,6 +242,10 @@ def main():
         record["coef_shape"] = list(c.shape)
         record["coef_l1"] = float(np.sum(np.abs(c)))
         record["coef_l2"] = float(np.sqrt(np.sum(c * c)))
+        record["fit_kwargs"] = fit_kwargs
+        record["threshold_used"] = cfg.get("optimizer", {}).get("threshold", None)
+
+
 
         record["ok"] = True
         write_jsonl(args.out, record)
