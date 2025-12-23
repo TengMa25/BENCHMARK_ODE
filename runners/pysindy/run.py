@@ -39,7 +39,9 @@ def inject_case_params(cfg: dict, case_id: str) -> dict:
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--method", required=True)     # pysindy
-    p.add_argument("--variant", required=True)
+    p.add_argument("--variant", default="stlsq",
+               help="pysindy variant (maps to configs/pysindy/<variant>.yaml)")
+
     p.add_argument("--system", required=True)
     p.add_argument("--case", required=True)       # "01"
     p.add_argument("--dataset", required=True)    # "01"
@@ -159,7 +161,9 @@ def main():
     data_path = resolve_data_path(args.data_root, args.system, args.case, args.dataset)
 
     # 读取 per-system per-method 配置：data/systems/<system>/configs/pysindy.yaml
-    method_cfg_path = os.path.join(system_dir, "configs", f"{args.method}.yaml")
+    method_cfg_path = os.path.join(
+        system_dir, "configs", "pysindy", f"{args.variant}.yaml"
+    )
     method_cfg = load_yaml(method_cfg_path)
 
     # 组装 cfg：code defaults -> method_cfg -> CLI override(json)
