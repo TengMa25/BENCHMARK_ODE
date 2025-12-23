@@ -39,6 +39,7 @@ def inject_case_params(cfg: dict, case_id: str) -> dict:
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--method", required=True)     # pysindy
+    p.add_argument("--variant", required=True)
     p.add_argument("--system", required=True)
     p.add_argument("--case", required=True)       # "01"
     p.add_argument("--dataset", required=True)    # "01"
