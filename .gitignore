@@ -1,0 +1,14 @@
+# results 永远不进 git（benchmark 产物）
+results/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 大数据文件（如果你不想进 git）
+*.npy
+*.npz
+
+# 编辑器/系统杂项
+.DS_Store
+Thumbs.db
